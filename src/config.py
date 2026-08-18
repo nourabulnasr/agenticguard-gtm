@@ -31,16 +31,20 @@ PROVIDER_MODE: Literal["free_tier", "anthropic"] = "free_tier"
 GROQ_MODEL = "openai/gpt-oss-20b"  # stands in for Claude Haiku 4.5
 
 # NOTE: the brief implied "a current Gemini flash model" for this role;
-# verified live against this Google AI Studio key (2026-08-18) that
-# gemini-2.5-flash returns 404 ("no longer available to new users") —
-# Google's own error message names gemini-3.6-flash as the replacement,
-# confirmed working. It's a thinking model: usage_metadata reports
-# thoughts_token_count separately from candidates_token_count (visible
-# output) and needs generous max_output_tokens (drafting calls use 700)
-# or the visible answer gets starved by the thinking budget. Our cost
-# tracker only counts candidates_token_count as "output" — see
-# cost_tracker.py's docstring for why that's fine for this PoC's purpose.
-GEMINI_MODEL = "gemini-3.6-flash"  # stands in for Claude Sonnet 5
+# verified live against this Google AI Studio key (2026-08-18):
+# - gemini-2.5-flash / gemini-2.5-flash-lite: 404 "no longer available to
+#   new users" despite being listed by models.list() — a live inconsistency
+#   in the API, not something guessable from docs.
+# - gemini-3.6-flash / gemini-flash-latest: work, but are thinking models
+#   that spent 800+ hidden "thoughts" tokens on this drafting prompt before
+#   any visible output (usage_metadata.thoughts_token_count), which both
+#   risks truncating the answer unless max_output_tokens is generously
+#   oversized AND was hitting 503 "high demand" at time of testing.
+# - gemini-3.1-flash-lite: works, no hidden thinking tax (thoughts_token_count
+#   is None), predictable token usage, was NOT overloaded. Chosen for
+#   reliability — this pipeline needs to run end-to-end without truncating
+#   mid-JSON on a free-tier rate limit.
+GEMINI_MODEL = "gemini-3.1-flash-lite"  # stands in for Claude Sonnet 5
 
 # --- Production target models (per the brief's cost model) ---
 ANTHROPIC_CHEAP_MODEL = "claude-haiku-4-5-20251001"
