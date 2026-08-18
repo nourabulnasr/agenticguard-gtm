@@ -27,13 +27,23 @@ that execute financial or account actions).
 
 Respond with ONLY a JSON object, no other text:
 {"ai_feature": "<short description, or 'not found' if none is stated>", \
-"risk_category": "<one of the three categories above, or 'none' if ai_feature \
-is 'not found'>", "risk_rationale": "<one sentence tying the specific feature \
-to the specific risk, grounded only in what the text actually says>"}
+"risk_category": "<one of the three categories above, or 'none'>", \
+"risk_rationale": "<one sentence tying the specific feature to the specific \
+risk, grounded only in what the text actually says>"}
+
+risk_category is "none" in TWO cases — treat them as equally valid, do not \
+force a fit:
+1. ai_feature is "not found" (no AI feature was stated at all).
+2. A real AI feature WAS found, but it doesn't clearly match any of the \
+three categories (e.g. an image-recognition feature that isn't a free-text \
+agent, a RAG system, or an autonomous action-taker). In this case keep the \
+real ai_feature description and set risk_category to "none" rather than \
+picking the closest-sounding category — an inaccurate risk label is worse \
+than an honest "none."
 
 If the page text does not describe a specific AI feature, you MUST return \
-ai_feature: "not found" and risk_category: "none". Never guess a plausible-\
-sounding AI feature the company might have just because it's a fintech."""
+ai_feature: "not found". Never guess a plausible-sounding AI feature the \
+company might have just because it's a fintech."""
 
 
 # Stage 2: Enrichment — routed to the CHEAP role (Haiku/Groq).
