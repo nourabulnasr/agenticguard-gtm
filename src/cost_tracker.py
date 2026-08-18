@@ -4,6 +4,15 @@ the PRODUCTION architecture's pricing (Claude Haiku 4.5 / Sonnet 5), per
 config.PRICING — regardless of which free-tier model actually served the
 call. Actual PoC spend is always $0 (free tier); this answers "what would
 this run cost on the architecture the brief specifies."
+
+Note on Gemini's thinking tokens: gemini-3.6-flash (the quality-role PoC
+model) reports prompt/candidates tokens separately from a hidden
+thoughts_token_count. providers.py only records candidates_token_count as
+"output" here, matching what a non-thinking-budget Sonnet 5 drafting call
+would actually emit — this is a live per-call snapshot for the demo, not
+the budget proof itself, which lives in architecture.html's static table
+using fixed estimated token counts independent of any one provider's
+internals.
 """
 from dataclasses import dataclass, field
 

@@ -29,7 +29,18 @@ PROVIDER_MODE: Literal["free_tier", "anthropic"] = "free_tier"
 # returned JSON text. If your key has llama-3.3-70b-versatile access,
 # swap it back — nothing else in the codebase depends on the model name.
 GROQ_MODEL = "openai/gpt-oss-20b"  # stands in for Claude Haiku 4.5
-GEMINI_MODEL = "gemini-2.5-flash"  # stands in for Claude Sonnet 5
+
+# NOTE: the brief implied "a current Gemini flash model" for this role;
+# verified live against this Google AI Studio key (2026-08-18) that
+# gemini-2.5-flash returns 404 ("no longer available to new users") —
+# Google's own error message names gemini-3.6-flash as the replacement,
+# confirmed working. It's a thinking model: usage_metadata reports
+# thoughts_token_count separately from candidates_token_count (visible
+# output) and needs generous max_output_tokens (drafting calls use 700)
+# or the visible answer gets starved by the thinking budget. Our cost
+# tracker only counts candidates_token_count as "output" — see
+# cost_tracker.py's docstring for why that's fine for this PoC's purpose.
+GEMINI_MODEL = "gemini-3.6-flash"  # stands in for Claude Sonnet 5
 
 # --- Production target models (per the brief's cost model) ---
 ANTHROPIC_CHEAP_MODEL = "claude-haiku-4-5-20251001"
