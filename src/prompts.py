@@ -86,10 +86,13 @@ language (not jargon dumping the category name itself).
 fake urgency, no fabricated stats.
 - LinkedIn note: under 300 characters, warmer and shorter, same specific \
 hook.
-- If the AI feature was reported as "not found", do not draft a \
-personalized security pitch — instead write a shorter, general \
-introduction email that asks about their AI roadmap rather than asserting \
-a specific risk that wasn't actually confirmed.
+- If risk_category is "none" — whether because no AI feature was found at \
+all, OR because a real AI feature was found but it doesn't match any of \
+AgenticGuard's three risk categories — do NOT draft a personalized \
+security-risk pitch. Instead write a shorter, general introduction email: \
+reference the real ai_feature by name if one was given (never invent a \
+different one), and ask about their broader AI roadmap rather than \
+asserting a specific risk connection that was never actually confirmed.
 
 Respond with ONLY a JSON object:
 {"email_subject": "...", "email_body": "...", "linkedin_note": "..."}"""
