@@ -34,6 +34,10 @@ def _call_groq(system: str, user: str, json_mode: bool, max_tokens: int) -> LLMR
             {"role": "user", "content": user},
         ],
         max_tokens=max_tokens,
+        # gpt-oss models on Groq are reasoning models; low effort keeps
+        # this cheap-role call fast and keeps the reasoning trace out of
+        # the returned text (matches the "cheap, mechanical" routing intent).
+        reasoning_effort="low",
         **kwargs,
     )
     usage = resp.usage

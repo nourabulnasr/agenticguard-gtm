@@ -20,7 +20,15 @@ load_dotenv()
 PROVIDER_MODE: Literal["free_tier", "anthropic"] = "free_tier"
 
 # --- Free-tier PoC models (zero cost, no card) ---
-GROQ_MODEL = "llama-3.3-70b-versatile"  # stands in for Claude Haiku 4.5
+# NOTE: the brief named "llama-3.3-70b-versatile" for this role. Verified
+# live against this Groq key (2026-08-18, client.models.list()) that it has
+# since been retired from Groq's catalog — 404 model_not_found. Swapped to
+# openai/gpt-oss-20b, a small/fast open-weight model on Groq that fills the
+# same "cheap, mechanical" role; call sites set reasoning_effort="low" to
+# keep it fast and keep its (Groq-specific) reasoning trace out of the
+# returned JSON text. If your key has llama-3.3-70b-versatile access,
+# swap it back — nothing else in the codebase depends on the model name.
+GROQ_MODEL = "openai/gpt-oss-20b"  # stands in for Claude Haiku 4.5
 GEMINI_MODEL = "gemini-2.5-flash"  # stands in for Claude Sonnet 5
 
 # --- Production target models (per the brief's cost model) ---
