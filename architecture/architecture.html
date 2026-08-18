@@ -171,6 +171,19 @@
     color: var(--ink-soft);
   }
   .chain-tradeoff strong { color: var(--ink); }
+  .badge-rt {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--accent);
+    padding: 1px 5px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
 
   .guard-chain {
     display: flex;
@@ -314,24 +327,29 @@
       <h2>Provider strategy</h2>
       <div class="callout">
         <strong>Architecture targets Claude Haiku 4.5 &amp; Sonnet 5</strong> per the cost model above &mdash; that's what ships in production, and the token math to the right is priced against those two models.<br><br>
-        The running proof-of-concept swaps in <strong>free-tier providers</strong> so it costs $0 to demonstrate: Groq (<code>llama-3.3-70b-versatile</code>) fills the cheap role, Gemini via Google AI Studio (<code>gemini-2.5-flash</code>) fills the quality role. The two-tier routing <em>intent</em> &mdash; mechanical work cheap, persuasive drafting expensive &mdash; is identical in both configurations.<br><br>
+        The running proof-of-concept swaps in <strong>free-tier providers</strong> so it costs $0 to demonstrate: Groq (<code>openai/gpt-oss-20b</code>) fills the cheap role, Gemini via Google AI Studio (<code>gemini-3.1-flash-lite</code>) fills the quality role &mdash; both verified live against real keys after the originally-planned models (<code>llama-3.3-70b-versatile</code>, a <code>gemini-2.5-*</code> model) turned out to be retired/unavailable; see the README. The two-tier routing <em>intent</em> &mdash; mechanical work cheap, persuasive drafting expensive &mdash; is identical in both configurations.<br><br>
         Provider selection is one config line (<code>config.PROVIDER_MODE</code>). Flip it to <code>"anthropic"</code> and every call routes directly to Claude with no other code change.
       </div>
     </div>
     <div>
       <h2>Anti-hallucination chain &middot; reply classifier</h2>
-      <p class="chain-lead">Ordered so the cheapest, most deterministic gate fails first &mdash; schema before model reasoning &mdash; minimizing tokens spent on malformed replies.</p>
+      <p class="chain-lead">Ordered so the cheapest, most deterministic gate fails first &mdash; schema and keyword checks before model reasoning &mdash; minimizing tokens spent on malformed or hostile replies.</p>
       <div class="guard-chain">
-        <div class="guard"><span class="n">1</span> Pydantic schema gate &mdash; only valid JSON matching the exact 3-field shape reaches the caller</div>
+        <div class="guard"><span class="n">1</span> Injection-marker pre-filter on the raw reply &mdash; matches short-circuit to safe-false <em>without calling the model</em> <span class="badge-rt">found by red-team</span></div>
         <div class="guard-arrow">&darr;</div>
-        <div class="guard"><span class="n">2</span> Structural evidence check &mdash; <code>meeting_requested=true</code> requires a non-empty, verbatim-quoted <code>evidence</code> string, enforced by the schema itself, not just the prompt</div>
+        <div class="guard"><span class="n">2</span> Pydantic schema gate &mdash; only valid JSON matching the exact 3-field shape reaches the caller</div>
         <div class="guard-arrow">&darr;</div>
-        <div class="guard"><span class="n">3</span> <code>proposed_time</code> stays <code>null</code> unless an explicit time is stated &mdash; never inferred</div>
+        <div class="guard"><span class="n">3</span> Structural evidence check &mdash; <code>meeting_requested=true</code> requires a non-empty, verbatim-quoted <code>evidence</code> string, enforced by the schema itself, not just the prompt</div>
         <div class="guard-arrow">&darr;</div>
-        <div class="guard"><span class="n">4</span> Retry once on parse/validation failure</div>
+        <div class="guard"><span class="n">4</span> Injection-marker check on the quoted <code>evidence</code> itself &mdash; verbatim-in-reply is necessary but not sufficient, an attacker can plant the phrase they want quoted <span class="badge-rt">found by red-team</span></div>
         <div class="guard-arrow">&darr;</div>
-        <div class="guard"><span class="n">5</span> Safe-false default on a second failure or any ambiguity &mdash; never crash, never guess</div>
+        <div class="guard"><span class="n">5</span> <code>proposed_time</code> stays <code>null</code> unless an explicit time is stated &mdash; never inferred</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">6</span> Retry once on parse/validation failure</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">7</span> Safe-false default on a second failure or any ambiguity &mdash; never crash, never guess</div>
       </div>
+      <p class="chain-tradeoff"><strong>Honest limitation:</strong> layers 1 and 4 are keyword-based, not a structural guarantee &mdash; they close the two exploits a manual red-team pass found (fake-delimiter injection, direct JSON-payload injection, both 5/5 reproducible before the fix, 0/5 after), not every conceivable phrasing. See README &sect; "What red-teaming caught."</p>
       <p class="chain-tradeoff"><strong>Known tradeoff:</strong> ambiguous "maybe later" resolves to false &mdash; we under-capture rather than over-claim, the correct bias when a false positive means chasing a meeting that was never offered.</p>
     </div>
   </section>
