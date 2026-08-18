@@ -1,0 +1,371 @@
+<title>Autonomous GTM Loop</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --paper: #f7f5f1;
+    --ink: #17140f;
+    --ink-soft: #4a453c;
+    --line: #d9d4c8;
+    --accent: #b5451f; /* single saturated earth-clay accent */
+    --cheap: #2f6f5e;  /* muted, desaturated — not a second accent, a role marker */
+    --quality: #7a5a1e;
+    --card: #ffffff;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 36px 48px 48px;
+  }
+
+  header.masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 3px solid var(--ink);
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+
+  header.masthead h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  header.masthead .sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  .kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    font-weight: 500;
+    margin: 0 0 4px;
+  }
+
+  section { margin-bottom: 24px; }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    margin: 0 0 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+  }
+
+  /* ---- pipeline ---- */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .stage {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 14px 14px 12px;
+    position: relative;
+  }
+  .stage:not(:last-child) { border-right: none; }
+
+  .stage .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+  .stage h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 2px 0 6px;
+  }
+  .stage p {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .role-tag {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 7px;
+    border-radius: 2px;
+    color: #fff;
+  }
+  .role-tag.cheap { background: var(--cheap); }
+  .role-tag.quality { background: var(--quality); }
+  .stage .model {
+    display: block;
+    margin-top: 5px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+
+  .arrow-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: -1px;
+  }
+  .arrow-row div {
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--line);
+    font-size: 16px;
+  }
+
+  /* ---- two column: poc note + anti-hallucination ---- */
+  .twocol {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 18px;
+  }
+
+  .callout {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    padding: 12px 14px;
+    font-size: 12px;
+  }
+  .callout strong { color: var(--accent); }
+
+  .chain-lead {
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin: 0 0 8px;
+  }
+  .chain-tradeoff {
+    margin: 8px 0 0;
+    padding: 8px 12px;
+    border-left: 3px solid var(--cheap);
+    background: var(--card);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .chain-tradeoff strong { color: var(--ink); }
+
+  .guard-chain {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .guard {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 8px 12px;
+    font-size: 11.5px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+  .guard:not(:last-child) { border-bottom: none; }
+  .guard .n {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    font-weight: 500;
+    min-width: 14px;
+  }
+  .guard-arrow {
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--line);
+    font-size: 13px;
+    line-height: 1;
+  }
+
+  /* ---- cost table ---- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+  td.num, th.num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  tr.total td {
+    border-top: 2px solid var(--ink);
+    border-bottom: none;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .cost-footer {
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .cost-footer .verdict {
+    color: var(--cheap);
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-soft);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page { padding: 10px 20px; max-width: 100%; }
+  }
+
+  @media (max-width: 860px) {
+    .pipeline, .arrow-row { grid-template-columns: 1fr; }
+    .arrow-row div { transform: rotate(90deg); padding: 2px 0; }
+    .twocol { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <div>
+      <p class="kicker">AgenticGuard &middot; GTM Engineering</p>
+      <h1>Autonomous GTM Loop</h1>
+    </div>
+    <div class="sub">
+      Architecture map &middot; v1<br>
+      Discovery &rarr; Enrichment &rarr; Drafting &rarr; Reply Classification
+    </div>
+  </header>
+
+  <section>
+    <h2>Pipeline &amp; cost routing</h2>
+    <div class="pipeline">
+      <div class="stage">
+        <span class="num">01</span>
+        <h3>Discovery</h3>
+        <p>Fetch company site, identify the AI feature they market, map it to an AgenticGuard risk category (prompt injection / RAG data exposure / autonomous agent manipulation).</p>
+        <span class="role-tag cheap">cheap &middot; mechanical</span>
+        <span class="model">claude-haiku-4-5</span>
+      </div>
+      <div class="stage">
+        <span class="num">02</span>
+        <h3>Enrichment</h3>
+        <p>Resolve CTO/CISO name + email via Hunter.io or public team-page parsing. Unverified guesses are flagged in the data, never passed off as real.</p>
+        <span class="role-tag cheap">cheap &middot; mechanical</span>
+        <span class="model">claude-haiku-4-5</span>
+      </div>
+      <div class="stage">
+        <span class="num">03</span>
+        <h3>Drafting</h3>
+        <p>Hyper-personalized cold email + LinkedIn note, grounded strictly in the specific mapped risk. The one stage that needs voice.</p>
+        <span class="role-tag quality">quality &middot; persuasive</span>
+        <span class="model">claude-sonnet-5</span>
+      </div>
+      <div class="stage">
+        <span class="num">04</span>
+        <h3>Reply Classifier</h3>
+        <p>Strict-JSON classification of inbound replies for meeting intent. Zero inference beyond what the reply literally states.</p>
+        <span class="role-tag cheap">cheap &middot; mechanical</span>
+        <span class="model">claude-haiku-4-5</span>
+      </div>
+    </div>
+    <div class="arrow-row"><div>&rarr;</div><div>&rarr;</div><div>&rarr;</div><div>&rarr;</div></div>
+  </section>
+
+  <section class="twocol">
+    <div>
+      <h2>Provider strategy</h2>
+      <div class="callout">
+        <strong>Architecture targets Claude Haiku 4.5 &amp; Sonnet 5</strong> per the cost model above &mdash; that's what ships in production, and the token math to the right is priced against those two models.<br><br>
+        The running proof-of-concept swaps in <strong>free-tier providers</strong> so it costs $0 to demonstrate: Groq (<code>llama-3.3-70b-versatile</code>) fills the cheap role, Gemini via Google AI Studio (<code>gemini-2.5-flash</code>) fills the quality role. The two-tier routing <em>intent</em> &mdash; mechanical work cheap, persuasive drafting expensive &mdash; is identical in both configurations.<br><br>
+        Provider selection is one config line (<code>config.PROVIDER_MODE</code>). Flip it to <code>"anthropic"</code> and every call routes directly to Claude with no other code change.
+      </div>
+    </div>
+    <div>
+      <h2>Anti-hallucination chain &middot; reply classifier</h2>
+      <p class="chain-lead">Ordered so the cheapest, most deterministic gate fails first &mdash; schema before model reasoning &mdash; minimizing tokens spent on malformed replies.</p>
+      <div class="guard-chain">
+        <div class="guard"><span class="n">1</span> Pydantic schema gate &mdash; only valid JSON matching the exact 3-field shape reaches the caller</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">2</span> Structural evidence check &mdash; <code>meeting_requested=true</code> requires a non-empty, verbatim-quoted <code>evidence</code> string, enforced by the schema itself, not just the prompt</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">3</span> <code>proposed_time</code> stays <code>null</code> unless an explicit time is stated &mdash; never inferred</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">4</span> Retry once on parse/validation failure</div>
+        <div class="guard-arrow">&darr;</div>
+        <div class="guard"><span class="n">5</span> Safe-false default on a second failure or any ambiguity &mdash; never crash, never guess</div>
+      </div>
+      <p class="chain-tradeoff"><strong>Known tradeoff:</strong> ambiguous "maybe later" resolves to false &mdash; we under-capture rather than over-claim, the correct bias when a false positive means chasing a meeting that was never offered.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Cost proof &middot; 20 leads, priced at production rates</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Model</th>
+          <th class="num">Est. input tok</th>
+          <th class="num">Est. output tok</th>
+          <th class="num">Cost / lead</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Discovery &mdash; scrape + risk-map</td><td>Haiku 4.5</td><td class="num">3,000</td><td class="num">300</td><td class="num">$0.0045</td></tr>
+        <tr><td>Enrichment &mdash; page parse</td><td>Haiku 4.5</td><td class="num">2,000</td><td class="num">150</td><td class="num">$0.0028</td></tr>
+        <tr><td>Drafting &mdash; email + LinkedIn note</td><td>Sonnet 5</td><td class="num">1,500</td><td class="num">500</td><td class="num">$0.0120</td></tr>
+        <tr><td>Reply classify &mdash; incl. 1 retry, worst case</td><td>Haiku 4.5</td><td class="num">1,000</td><td class="num">200</td><td class="num">$0.0020</td></tr>
+        <tr class="total"><td colspan="4">Total &middot; per lead</td><td class="num">$0.0213</td></tr>
+        <tr class="total"><td colspan="4">Total &middot; 20 leads</td><td class="num">$0.43</td></tr>
+      </tbody>
+    </table>
+    <p class="cost-footer">
+      <span class="verdict">PASS &mdash; ~117&times; under the $50 budget.</span>
+      Priced at Anthropic's standard post-intro rate ($1/$5 per 1M tokens Haiku 4.5, $3/$15 per 1M Sonnet 5) so the margin holds after the Sonnet 5 intro rate expires 2026-08-31. Margin comes from routing discipline: only Drafting pays quality-tier rates &mdash; running all four stages at Sonnet pricing would still clear budget (~$0.04/lead, ~$0.80/20 leads), but the routing is the deliberate cost-discipline point being demonstrated, not a necessity at this volume.
+    </p>
+  </section>
+
+  <footer>
+    <span>agenticguard-gtm &middot; architecture v1</span>
+    <span>Discovery &middot; Enrichment &middot; Drafting &middot; Reply Classifier</span>
+  </footer>
+
+</div>
