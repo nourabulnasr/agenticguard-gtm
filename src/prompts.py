@@ -26,14 +26,28 @@ with reduced human oversight (autonomous transaction agents, agentic workflows \
 that execute financial or account actions).
 
 Respond with ONLY a JSON object, no other text:
-{"ai_feature": "<short description, or 'not found' if none is stated>", \
+{"ai_feature": "<short description, or 'no specific AI feature identified \
+from public site' if none is stated>", \
 "risk_category": "<one of the three categories above, or 'none'>", \
 "risk_rationale": "<one sentence tying the specific feature to the specific \
 risk, grounded only in what the text actually says>"}
 
+CONFIDENCE THRESHOLD — this is the most important rule. Only report a \
+specific ai_feature when the scraped text makes a clear, unambiguous, \
+substantive claim about what the feature does. If the text is short, \
+mostly boilerplate/navigation, vague, or you are inferring rather than \
+reading a direct statement, you MUST return ai_feature: "no specific AI \
+feature identified from public site" instead of committing to a shaky \
+guess. A wrong or overconfident feature description is a hallucinated \
+company profile — the single worst failure mode for this task, worse \
+than returning nothing. When genuinely uncertain, saying so honestly \
+always beats sounding specific.
+
 risk_category is "none" in TWO cases — treat them as equally valid, do not \
 force a fit:
-1. ai_feature is "not found" (no AI feature was stated at all).
+1. ai_feature is "no specific AI feature identified from public site" (no \
+AI feature was stated at all, or confidence was too low per the threshold \
+above).
 2. A real AI feature WAS found, but it doesn't clearly match any of the \
 three categories (e.g. an image-recognition feature that isn't a free-text \
 agent, a RAG system, or an autonomous action-taker). In this case keep the \
@@ -41,9 +55,11 @@ real ai_feature description and set risk_category to "none" rather than \
 picking the closest-sounding category — an inaccurate risk label is worse \
 than an honest "none."
 
-If the page text does not describe a specific AI feature, you MUST return \
-ai_feature: "not found". Never guess a plausible-sounding AI feature the \
-company might have just because it's a fintech."""
+Never guess a plausible-sounding AI feature the company might have just \
+because it's a fintech, and never let the company's name or your prior \
+knowledge of what a similarly-named company does override what THIS \
+scraped text actually says — classify only the page content in front of \
+you, not your assumptions about the company."""
 
 
 # Stage 2: Enrichment — routed to the CHEAP role (Haiku/Groq).
@@ -71,28 +87,57 @@ against prompt injection, RAG data exposure, and autonomous agent \
 manipulation.
 
 You will be given: a company name, the specific AI feature they publicly \
-describe, and the specific AgenticGuard risk category that feature maps to. \
-Write a hyper-personalized, concise cold email AND a short LinkedIn \
-connection note, both grounded ONLY in the specific feature and risk you \
-were given — never invent product details, statistics, breach incidents, \
-or claims about the company that were not provided to you.
+describe (or a statement that none was identified), and the specific \
+AgenticGuard risk category that feature maps to (or "none"). Write a \
+concise cold email AND a short LinkedIn connection note, grounded ONLY in \
+what you were given — never invent product details, statistics, breach \
+incidents, or claims about the company that were not provided to you.
 
-Rules:
-- Reference the company's actual named AI feature specifically, not a \
-generic "your AI systems."
-- Name the specific risk category's real-world failure mode in plain \
-language (not jargon dumping the category name itself).
+There are exactly THREE cases. Identify which one applies from the inputs \
+you were given, and follow that case's rules exactly — do not blend them:
+
+CASE A — a real ai_feature AND a real risk_category (prompt_injection, \
+rag_data_exposure, or autonomous_agent_manipulation) were both given:
+- The email body MUST name the actual ai_feature specifically (not a \
+generic "your AI systems" or "your AI roadmap").
+- The email body MUST also state, in plain language, the real-world \
+failure mode of the specific risk_category you were given — e.g. for \
+prompt_injection: describe an attacker crafting input that manipulates \
+the feature into acting against its instructions; for rag_data_exposure: \
+describe the feature surfacing internal/proprietary data it shouldn't; \
+for autonomous_agent_manipulation: describe the feature taking a real \
+unauthorized action with too little human oversight. State it as it \
+applies to THEIR named feature, not as a generic definition.
+- Both the feature name and the risk mechanism must be identifiable by a \
+human reader skimming the email — do not bury them in vague language.
 - Email: 120-160 words, one clear call to action (a 15-minute call), no \
 fake urgency, no fabricated stats.
-- LinkedIn note: under 300 characters, warmer and shorter, same specific \
-hook.
-- If risk_category is "none" — whether because no AI feature was found at \
-all, OR because a real AI feature was found but it doesn't match any of \
-AgenticGuard's three risk categories — do NOT draft a personalized \
-security-risk pitch. Instead write a shorter, general introduction email: \
-reference the real ai_feature by name if one was given (never invent a \
-different one), and ask about their broader AI roadmap rather than \
-asserting a specific risk connection that was never actually confirmed.
+- LinkedIn note: under 300 characters, same specific feature + risk hook, \
+warmer and shorter.
+
+CASE B — a real ai_feature was given, but risk_category is "none" (the \
+feature doesn't map to any of AgenticGuard's three categories):
+- Reference the real ai_feature by name (never invent a different one, \
+never invent a risk connection that wasn't given to you).
+- Do NOT draft a security-risk pitch — there is no confirmed risk to \
+pitch. Ask a genuine, feature-specific question about their broader AI \
+roadmap instead.
+- Shorter than Case A. Still specific to the named feature, just not \
+alarmist about it.
+
+CASE C — ai_feature is "no specific AI feature identified from public \
+site" (nothing was found):
+- Do NOT write anything that implies familiarity with their product or \
+specific AI work — no "I've been following your growth," no invented hook.
+- The email MUST explicitly and plainly disclose that this is a general \
+introduction because no specific public AI feature was identified — e.g. \
+open with something like "I wasn't able to find a specific public AI \
+feature for [Company], so this is a general introduction:" Say this \
+honestly rather than dressing up a vague pitch to sound personalized.
+- Keep it short: one or two sentences on what AgenticGuard does, one \
+question about whether they're building with AI, one soft call to action.
+- The LinkedIn note follows the same honesty: brief, general, no \
+fabricated specificity.
 
 Respond with ONLY a JSON object:
 {"email_subject": "...", "email_body": "...", "linkedin_note": "..."}"""

@@ -11,8 +11,15 @@ from src.reply_classifier import classify_reply
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
+# NOTE: the brief listed "khazna.com" as the target. Verified via web
+# search that this resolves to an unrelated Gulf trading-card-collection
+# app, not the Egyptian earned-wage-access fintech "Khazna" the brief
+# means — the real Khazna is at khazna.app. Corrected here; see README's
+# "What real-world testing caught" for the full story (the original
+# domain produced a discovery result that looked like a hallucination but
+# was actually an accurate description of the wrong company).
 TARGET_URLS = [
-    "khazna.com",
+    "khazna.app",
     "nowpay.com",
     "paymob.com",
     "tabby.com",

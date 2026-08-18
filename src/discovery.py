@@ -5,8 +5,8 @@ role — this is mechanical extraction, not persuasive writing.
 
 Respects robots.txt: before fetching any URL, checks whether our user
 agent is allowed to fetch that specific path, and skips the fetch (falling
-back to a "not found" DiscoveryResult) if disallowed, rather than fetching
-anyway.
+back to an honest "no specific AI feature identified" DiscoveryResult) if
+disallowed, rather than fetching anyway.
 """
 import json
 import logging
@@ -27,7 +27,7 @@ TIMEOUT_SECONDS = 10
 MAX_PAGE_CHARS = 6000  # keep the cheap-model call small and cheap
 
 _NOT_FOUND = DiscoveryResult(
-    ai_feature="not found",
+    ai_feature="no specific AI feature identified from public site",
     risk_category="none",
     risk_rationale="Page could not be fetched (network error or robots.txt disallow).",
 )
@@ -90,7 +90,7 @@ def discover_company(url: str) -> DiscoveryResult:
             logger.warning("discover_company attempt %d failed: %s", attempt + 1, e)
 
     return DiscoveryResult(
-        ai_feature="not found",
+        ai_feature="no specific AI feature identified from public site",
         risk_category="none",
         risk_rationale="Model output could not be parsed after retry.",
     )
