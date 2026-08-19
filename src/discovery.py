@@ -47,7 +47,10 @@ def _robots_allowed(url: str) -> bool:
     return rp.can_fetch(USER_AGENT, url)
 
 
-def fetch_page_text(url: str) -> str:
+def _fetch_page(url: str) -> str:
+    """Shared robots-checked fetch. Returns raw HTML, or "" on any failure
+    (network error, non-2xx, robots.txt disallow) — never raises, since
+    every caller treats "nothing fetched" as a normal, honest outcome."""
     if not url.startswith(("http://", "https://")):
         url = f"https://{url}"
     if not _robots_allowed(url):
@@ -61,7 +64,21 @@ def fetch_page_text(url: str) -> str:
     except requests.RequestException as e:
         logger.warning("fetch failed for %s: %s", url, e)
         return ""
-    soup = BeautifulSoup(resp.text, "html.parser")
+    return resp.text
+
+
+def fetch_page_html(url: str) -> str:
+    """Raw HTML (robots-checked), for callers that need actual markup —
+    e.g. enrichment.py's team-page link discovery, which needs real <a>
+    tags, not the text-only output fetch_page_text produces."""
+    return _fetch_page(url)
+
+
+def fetch_page_text(url: str) -> str:
+    html = _fetch_page(url)
+    if not html:
+        return ""
+    soup = BeautifulSoup(html, "html.parser")
     for tag in soup(["script", "style", "nav", "footer"]):
         tag.decompose()
     text = " ".join(soup.get_text(separator=" ").split())

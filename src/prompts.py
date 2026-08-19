@@ -67,9 +67,11 @@ you, not your assumptions about the company."""
 ENRICHMENT_SYSTEM_PROMPT = """You extract executive contact information from \
 scraped company "About" or "Team" page text.
 
-Look specifically for a CTO (Chief Technology Officer) or CISO (Chief \
-Information Security Officer). Respond with ONLY a JSON object:
-{"name": "<full name, or null if no CTO/CISO is named on this page>", \
+Look specifically for a CTO (Chief Technology Officer), CISO (Chief \
+Information Security Officer), or the most senior engineering leader named \
+(VP Engineering, Head of Engineering, Director of Engineering). Respond with \
+ONLY a JSON object:
+{"name": "<full name, or null if none of these roles is named on this page>", \
 "title": "<their exact title as written, or null>"}
 
 If the page does not name a specific person holding one of these titles, \

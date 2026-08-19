@@ -18,11 +18,19 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 # "What real-world testing caught" for the full story (the original
 # domain produced a discovery result that looked like a hallucination but
 # was actually an accurate description of the wrong company).
+#
+# Same catch, same fix, for "tabby.com": it resolves to an unrelated
+# kids'-tablet company ("TABBY | The Kids' Tablet Built for Safe
+# Discovery"), not the Tabby BNPL fintech the brief means — the real
+# Tabby is at tabby.ai. Verified live (2026-08-19): tabby.com serves that
+# unrelated site directly (HTTP 200, no redirect); tabby.ai is the real
+# fintech (its CSP header even lists tabby.ai/tabby.sa/tabby.dev as
+# related domains). Corrected here for the same reason as Khazna above.
 TARGET_URLS = [
     "khazna.app",
     "nowpay.com",
     "paymob.com",
-    "tabby.com",
+    "tabby.ai",
     "tamara.com",
 ]
 

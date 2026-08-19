@@ -26,8 +26,10 @@ _TARGETED_RISK_CLAIM = re.compile(
 
 _CONTACT = ContactInfo(
     name="Sara Ahmed",
-    email="cto@example.com [UNVERIFIED PLACEHOLDER]",
-    email_is_placeholder=True,
+    title=None,
+    email="cto@example.com",
+    email_confidence="PLACEHOLDER",
+    email_confidence_note="test fixture, not a real lookup",
     linkedin_url="https://www.linkedin.com/search/results/people/?keywords=Sara+Ahmed",
     linkedin_is_search_link=True,
 )

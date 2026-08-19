@@ -40,17 +40,27 @@ def run_pipeline(urls: list[str], out_csv_path: str) -> None:
         discovery_result = discover_company(url)
         contact = enrich_contact(domain, company)
         draft = draft_outreach(company, discovery_result, contact)
+        logger.info(
+            "%s contact: name=%r title=%r email_confidence=%s note=%s",
+            company, contact.name, contact.title, contact.email_confidence,
+            contact.email_confidence_note,
+        )
 
         # MOCK SEND ONLY — we generate the email/LinkedIn payloads above
         # and write them to CSV below. We deliberately do NOT call
         # SendGrid, LinkedIn, or any send API here; per the brief this
         # pipeline generates outreach content for human review, it does
         # not autonomously contact anyone.
+        name_display = (
+            f"{contact.name} — {contact.title}"
+            if contact.name and contact.title
+            else contact.name or "Unknown (not found on public pages)"
+        )
         rows.append(
             {
                 "Company": company,
-                "CTO Name": contact.name or "Unknown (not found on public pages)",
-                "CTO Email": contact.email,
+                "CTO Name": name_display,
+                "CTO Email": f"{contact.email} [{contact.email_confidence}]",
                 "LinkedIn URL": contact.linkedin_url
                 + (
                     " [search link, not a resolved profile]"

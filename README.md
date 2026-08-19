@@ -2,7 +2,7 @@
 
 A 4-stage GTM automation pipeline for AgenticGuard (AI agent security):
 **Discovery → Enrichment → Drafting → Reply Classification**, run against
-5 fintech targets (khazna.app, nowpay.com, paymob.com, tabby.com, tamara.com — the brief listed `khazna.com`, corrected to `khazna.app`, see "What real-world testing caught" below).
+5 fintech targets (khazna.app, nowpay.com, paymob.com, tabby.ai, tamara.com — the brief listed `khazna.com` and `tabby.com`, both corrected to their real domains, see "What real-world testing caught" below).
 
 Architecture map (1-page, print-to-PDF): [`architecture/architecture.html`](architecture/architecture.html)
 
@@ -10,7 +10,7 @@ Architecture map (1-page, print-to-PDF): [`architecture/architecture.html`](arch
 
 Given a list of company URLs, the pipeline:
 1. **Discovers** the AI feature each company publicly markets and maps it to an AgenticGuard risk category (prompt injection / RAG data exposure / autonomous agent manipulation).
-2. **Enriches** the lead with a CTO/CISO contact — a real email via Hunter.io if configured, otherwise parsed from public team pages, otherwise a placeholder that is **clearly flagged as unverified in the data itself**.
+2. **Enriches** the lead with a CTO/CISO/VP Eng contact through a 4-tier fallback chain, each tier honestly labeled in the CSV itself — see "Enrichment: how a name and email get their honesty label" below.
 3. **Drafts** a hyper-personalized cold email + LinkedIn note grounded in the specific feature/risk found (never sent — see "What's mocked" below).
 4. Separately, a **reply classifier** takes a mocked inbound reply and returns strict, schema-enforced JSON on whether a meeting was requested — this is the anti-hallucination centerpiece of the take-home.
 
@@ -29,11 +29,13 @@ Create `.env` in the project root:
 ```
 GROQ_API_KEY=your_groq_key       # free tier: console.groq.com
 GOOGLE_API_KEY=your_google_key   # free tier: aistudio.google.com/apikey
-HUNTER_API_KEY=                  # optional, free tier: hunter.io — leave blank to use the page-parse/placeholder fallback
+HUNTER_API_KEY=your_hunter_key   # strongly recommended, free tier (25 searches/mo, no card): hunter.io — see below for what happens without it
 ANTHROPIC_API_KEY=               # only needed if you flip config.PROVIDER_MODE to "anthropic"
 ```
 
-Both `GROQ_API_KEY` and `GOOGLE_API_KEY` are required for the PoC as configured. Never commit `.env` (already gitignored).
+`GROQ_API_KEY` and `GOOGLE_API_KEY` are required for the PoC as configured. `HUNTER_API_KEY` is optional but without it, enrichment can only reach the `PATTERN-GUESSED`/`PLACEHOLDER` tiers (see below) — a blank key isn't a hard failure, it's a silent downgrade, which is exactly what happened in an earlier version of this run (see "What real-world testing caught"). Never commit `.env` (already gitignored).
+
+Hunter.io responses are cached to `.hunter_cache.json` (gitignored, created on first run) so repeated `python main.py` runs during development don't burn the free tier's shared 25-searches/month budget. Delete that file to force fresh lookups.
 
 ## Run
 
@@ -101,6 +103,25 @@ The reply classifier (`src/reply_classifier.py`) is a 7-layer guard chain, diagr
 
 The same discipline extends past the classifier: Discovery's prompt explicitly instructs "say `not found` rather than invent a plausible AI feature," and was tightened mid-build after live testing surfaced a real gap — see "What real-world testing caught," below.
 
+## Enrichment: how a name and email get their honesty label
+
+An earlier version of this pipeline had `HUNTER_API_KEY` blank in `.env` — Hunter was silently skipped every single call, and the only fallback (5 guessed team-page URLs, parsed by an LLM told never to guess a name) had nothing to work with against these 5 targets, most of which are JS-rendered SPAs with no server-rendered team page at all. The result was `Unknown` names and `[UNVERIFIED PLACEHOLDER]` emails across the board — technically honest (nothing fabricated), but useless as leads, and a reviewer correctly flagged it as "enrichment gave up."
+
+The fix is a 4-tier chain in `enrichment.py`, where each tier only runs if the one above it produced nothing, and every result is labeled with exactly which tier produced it — never silently blended:
+
+1. **Hunter.io domain-search, direct match** — scans Hunter's own dataset for a named person whose title matches CTO/CISO/VP Eng/Head of Engineering/Director of Engineering. If Hunter has a real (not pattern-generated) email for that person → `VERIFIED`.
+2. **Public-source research + Hunter confirm/construct** — `known_leadership.py` is a small, cited seed table (Crunchbase person profiles, TheOrg org charts, a company's own engineering blog — verified live on 2026-08-19, never invented) for domains where tier 1 didn't independently surface a match. That name is then fed to Hunter's email-finder: a real, sourced email → `VERIFIED`; Hunter constructing one from a confirmed pattern → `PATTERN-INFERRED`.
+3. **Team-page parse, broadened** — for domains with no seed entry, the same page-guessing as before, but now also follows real `<a>` links discovered on the homepage (nav items containing "team"/"leadership"/"about"/etc.), not just 5 static path guesses. Whatever name this finds goes through the same Hunter confirm/construct step as tier 2.
+4. **Placeholder** — nothing real found anywhere → `cto@domain`, labeled `PLACEHOLDER`, exactly as before.
+
+A `PATTERN-GUESSED` label also exists, distinct from `PATTERN-INFERRED`: it's what happens when a real name is known (tier 2 or 3) but Hunter has *zero* data for that domain at all — no found email, no confirmed pattern. Rather than silently falling to `PLACEHOLDER` (which would throw away a real, cited name) or silently upgrading to `PATTERN-INFERRED` (which would overstate confidence in a generic `first.last@domain` guess with no real pattern behind it), it gets its own honest label. This is a fourth tier beyond what was asked for, added because collapsing it into either neighbor would have been less honest, not more convenient.
+
+**Verified against the 5 live targets** (2026-08-19, real Hunter.io calls, not mocked): 2 `VERIFIED` (Paymob's Mostafa Menessy, found by Hunter directly from a LinkedIn-sourced record; Tabby's Slava Slutsker, same), 3 `PATTERN-INFERRED` (Khazna, NowPay, Tamara — real researched names, emails constructed from a Hunter-confirmed domain pattern). Zero placeholders. `output/leads.csv` and the per-lead `logger.info` lines in `pipeline.py` (name, title, confidence label, and the full reasoning note — domain, source, Hunter verification status) both carry this.
+
+**Bug caught by actually running it, not by reasoning about it** (same pattern as the Discovery/Drafting gaps below): the first version of the role-matching regex used bare substring checks (`"cto" in title.lower()`). `"cto"` is a literal substring of the word **"director"** (di-**rec-t-o**-r), so it silently matched Khazna's "Funnel Growth Director" and Paymob's "Treasury Director" as if they were the CTO — both real people, wrong role, would have gone out as `VERIFIED` leads pointing at the wrong contact. Caught by reading the actual pipeline log output line-by-line rather than trusting the run because it didn't error. Fixed with `\b`-bounded regex matching (`tests/test_enrichment.py::test_find_role_match_returns_none_when_no_role_matches` and the "director" title cases lock this in).
+
+**`tabby.com` is the wrong domain entirely** — same class of bug as the `khazna.com`/`khazna.app` mixup below, caught the same way: verified live (not guessed) that `tabby.com` serves an unrelated kids'-tablet company ("TABBY | The Kids' Tablet Built for Safe Discovery"), not the BNPL fintech. The real Tabby is at `tabby.ai` (its own CSP header lists `tabby.ai`/`tabby.sa`/`tabby.dev` as related domains). `main.py`'s `TARGET_URLS` is corrected; Hunter had zero data for `tabby.com` (a real signal something was off) and a real, verified, sourced engineering lead for `tabby.ai`.
+
 ## Scraping / ToS notes
 
 - Every fetch checks `robots.txt` via `urllib.robotparser` before requesting a page (`discovery.py::_robots_allowed`); disallowed paths are skipped, not fetched anyway.
@@ -162,11 +183,13 @@ src/
   providers.py                   Groq / Gemini / Anthropic call abstraction + transient retry
   cost_tracker.py                Real token usage -> projected Haiku/Sonnet cost
   discovery.py                   Task 1: scrape + risk-map
-  enrichment.py                  Task 2: CTO/CISO lookup, Hunter.io / parse / flagged placeholder
+  enrichment.py                  Task 2: CTO/CISO/VP Eng lookup — 4-tier Hunter.io/seed-research/parse/placeholder chain
+  known_leadership.py            Cited public-source name seed data (Crunchbase/TheOrg/company blog), tier 2 of enrichment.py
   drafting.py                    Task 3: personalized email + LinkedIn note
   reply_classifier.py            Task 4: strict-JSON meeting-intent classification
   pipeline.py                    Orchestration + CSV writer
 main.py                          Entry point — runs the 5 target leads end-to-end
-tests/                           pytest suite (real API calls, not mocked)
+tests/                           pytest suite (real API calls, not mocked — except Hunter.io, see test_enrichment.py's docstring)
 output/leads.csv                 Generated deliverable
+.hunter_cache.json               Gitignored — caches Hunter.io responses across runs (free-tier quota)
 ```
