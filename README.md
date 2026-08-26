@@ -6,6 +6,8 @@ A 4-stage GTM automation pipeline for AgenticGuard (AI agent security):
 
 Architecture map (1-page, print-to-PDF): [`architecture/architecture.html`](architecture/architecture.html)
 
+CEO review deck (13-slide walkthrough — concept/architecture, demonstration, cost-routing & anti-hallucination): [`architecture/presentation.html`](architecture/presentation.html) ([PDF export](architecture/presentation.pdf)).
+
 ## What this is
 
 Given a list of company URLs, the pipeline:

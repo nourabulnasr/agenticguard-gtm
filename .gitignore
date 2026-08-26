@@ -6,3 +6,4 @@ venv/
 *.egg-info/
 .pytest_cache/
 .hunter_cache.json
+docs/ceo-review-prep.md
